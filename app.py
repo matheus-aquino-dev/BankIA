@@ -12,8 +12,12 @@ load_dotenv()
 from pathlib import Path
 from data_processor import load_all, compute_kpis, build_agent_contexts, dataframes_to_json
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
+
+import mimetypes
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("application/javascript", ".js")
 
 # Cache em memória — preenchido apenas após upload
 _session: dict = {}
