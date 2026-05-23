@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BankIQ — Sistema Bancário Inteligente</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TELA DE UPLOAD (estado inicial)
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="upload-screen">
+  <div class="upload-bg">
+    <div class="upload-orb orb1"></div>
+    <div class="upload-orb orb2"></div>
+    <div class="upload-orb orb3"></div>
+  </div>
+
+  <div class="upload-card" id="drop-zone">
+    <div class="upload-logo">🏦</div>
+    <h1 class="upload-title">BankIQ</h1>
+    <p class="upload-sub">Sistema Bancário Inteligente · Arquitetura Multiagente</p>
+
+    <div class="drop-area" id="drop-area">
+      <div class="drop-icon">📊</div>
+      <p class="drop-label">Arraste seu Excel aqui</p>
+      <p class="drop-hint">ou clique para selecionar</p>
+      <p class="drop-ext">.xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .xlsm</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm" hidden />
+    </div>
+
+    <div class="upload-info">
+      <div class="info-item">📋 <span>clientes</span></div>
+      <div class="info-item">💳 <span>transacoes</span></div>
+      <div class="info-item">💰 <span>emprestimos</span></div>
+      <div class="info-item">🚨 <span>inadimplencia</span></div>
+    </div>
+    <p class="upload-hint-txt">O arquivo precisa ter pelo menos uma dessas abas</p>
+  </div>
+
+  <!-- PROGRESS OVERLAY -->
+  <div class="progress-overlay" id="progress-overlay" style="display:none">
+    <div class="progress-card">
+      <div class="prog-spinner"></div>
+      <div class="prog-filename" id="prog-filename"></div>
+      <div class="prog-steps" id="prog-steps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+      <div class="prog-status" id="prog-status">Iniciando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     DASHBOARD (estado após upload)
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="dashboard-screen" style="display:none">
+
+  <header class="header">
+    <div class="header-brand">
+      <div class="logo-icon">🏦</div>
+      <div>
+        <h1>BankIQ</h1>
+        <p>Sistema Bancário Inteligente · Arquitetura Multiagente</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="source-pill" id="source-filename">📄 —</span>
+      <div class="abas-pills" id="abas-pills"></div>
+      <div class="status-pill"><span class="dot"></span> 4 Agentes Ativos</div>
+      <button class="reload-btn" onclick="resetSystem()">⬆ Novo Upload</button>
+    </div>
+  </header>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showTab('dashboard', this)">📊 Dashboard</button>
+    <button class="nav-btn" onclick="showTab('dados', this)">🗄️ Base de Dados</button>
+    <button class="nav-btn" onclick="showTab('agentes', this)">🤖 Agentes IA</button>
+    <button class="nav-btn" onclick="showTab('gerente', this)">👑 Gerente Geral</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab active">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>Carteira por Modalidade (R$)</h3><div class="chart-wrap"><canvas id="chartModalidade"></canvas></div></div>
+        <div class="chart-card"><h3>Perfil dos Clientes</h3><div class="chart-wrap"><canvas id="chartPerfil"></canvas></div></div>
+        <div class="chart-card"><h3>Flags de Transações</h3><div class="chart-wrap"><canvas id="chartFlags"></canvas></div></div>
+        <div class="chart-card"><h3>Inadimplência por Risco</h3><div class="chart-wrap"><canvas id="chartRisco"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <h3>Carteira por Modalidade</h3>
+        <table id="tbl-modalidade"><thead><tr><th>Modalidade</th><th>Qtd</th><th>Saldo Total</th><th>Taxa Média</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- DADOS -->
+    <section id="tab-dados" class="tab">
+      <div class="tables-grid" id="tables-grid"></div>
+    </section>
+
+    <!-- AGENTES -->
+    <section id="tab-agentes" class="tab">
+      <p class="section-desc">Cada agente lê sua fatia do Excel via Python, calcula KPIs e envia o contexto à IA para diagnóstico.</p>
+      <div class="agents-grid">
+        <div class="agent-card">
+          <div class="agent-hd"><span class="agent-icon" style="background:#DBEAFE">📋</span><div><div class="agent-name">Agente de Crédito</div><div class="agent-src">emprestimos + inadimplencia</div></div></div>
+          <div class="agent-ctx" id="ctx-credito"></div>
+          <div class="agent-out loading" id="out-credito">Clique em Analisar para gerar diagnóstico com IA...</div>
+          <button class="run-btn" id="btn-credito" onclick="runAgent('credito')">🧠 Analisar Crédito</button>
+        </div>
+        <div class="agent-card">
+          <div class="agent-hd"><span class="agent-icon" style="background:#FEE2E2">🛡️</span><div><div class="agent-name">Agente de Fraude</div><div class="agent-src">transacoes</div></div></div>
+          <div class="agent-ctx" id="ctx-fraude"></div>
+          <div class="agent-out loading" id="out-fraude">Clique em Analisar para gerar diagnóstico com IA...</div>
+          <button class="run-btn" id="btn-fraude" onclick="runAgent('fraude')">🧠 Analisar Fraudes</button>
+        </div>
+        <div class="agent-card">
+          <div class="agent-hd"><span class="agent-icon" style="background:#DCFCE7">📈</span><div><div class="agent-name">Agente de Investimentos</div><div class="agent-src">clientes</div></div></div>
+          <div class="agent-ctx" id="ctx-invest"></div>
+          <div class="agent-out loading" id="out-invest">Clique em Analisar para gerar diagnóstico com IA...</div>
+          <button class="run-btn" id="btn-invest" onclick="runAgent('invest')">🧠 Analisar Investimentos</button>
+        </div>
+        <div class="agent-card ghost-card">
+          <div style="font-size:2rem;margin-bottom:.5rem">👑</div>
+          <div class="agent-name">Gerente Geral</div>
+          <div class="agent-src" style="margin:.4rem 0 1rem">Consolida os 3 agentes</div>
+          <button class="run-btn" onclick="document.querySelectorAll('.nav-btn')[3].click()">→ Ir para Gerente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GERENTE -->
+    <section id="tab-gerente" class="tab">
+      <div class="gerente-wrap">
+        <div class="gerente-hd">
+          <span style="font-size:1.6rem">👑</span>
+          <div><div class="gerente-title">Gerente Geral — Agente Consolidador</div><div class="gerente-sub">Integra Crédito + Fraude + Investimentos para decisão estratégica</div></div>
+          <span class="ceo-badge">CEO IA</span>
+        </div>
+        <div class="gerente-ctx" id="gerente-ctx-summary"></div>
+        <div class="gerente-out" id="out-gerente">Pressione "Gerar Relatório Executivo" para o Gerente consolidar os dados e produzir diretrizes estratégicas.</div>
+        <div class="gerente-btns">
+          <button class="gbtn primary" id="btn-gerente" onclick="runGerente()">📑 Gerar Relatório Executivo</button>
+          <button class="gbtn secondary" onclick="document.getElementById('out-gerente').textContent='Aguardando...'">🗑 Limpar</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
